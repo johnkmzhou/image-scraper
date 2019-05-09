@@ -8,7 +8,7 @@ function download(uri, localPath) {
 
 (async () => {
   try {
-    if (process.argv[2]) {
+    if (process.argv[2] && process.argv[3]) {
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
       await page.setJavaScriptEnabled(false);
