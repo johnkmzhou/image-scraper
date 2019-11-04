@@ -1,8 +1,8 @@
 # image-scraper
 
-This is specifically targeted to scrape deeply nested images from Wordpress galleries.
+This is targeted to scrape deeply nested images from Wordpress galleries or Getty images.
 
 ```
 npm install
-node index.js url download-directory
+node index.js -getty|-wp url download-directory
 ```
