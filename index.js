@@ -2,18 +2,19 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const request = require("request");
 
-function download(uri, localPath) {
-  request(uri).pipe(fs.createWriteStream(localPath));
-}
+(async () => {
+  if (process.argv[3] && process.argv[4]) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setJavaScriptEnabled(false);
+    await page.setRequestInterception(true);
+    page.on("request", request => {
+      if (request.resourceType() === "image") request.abort();
+      else request.continue();
+    });
+    await page.goto(process.argv[3]);
 
-if (process.argv[2] === "-wp") {
-  (async () => {
-    if (process.argv[3] && process.argv[4]) {
-      const browser = await puppeteer.launch();
-      const page = await browser.newPage();
-      await page.setJavaScriptEnabled(false);
-      await page.goto(process.argv[3]);
-
+    if (process.argv[2] === "-wp") {
       const hrefs = await page.$$eval('a[href^="displayimage.php"]', elements =>
         elements.map(a => a.href)
       );
@@ -29,25 +30,11 @@ if (process.argv[2] === "-wp") {
         const img = await page.$eval("img#fullsize_image", element => {
           if (element) return { src: element.src, alt: element.alt };
         });
-
-        download(img.src, process.argv[4] + "\\" + img.alt);
+        request(img.src).pipe(
+          fs.createWriteStream(process.argv[4] + "\\" + img.alt)
+        );
       }
-
-      await browser.close();
-    } else {
-      console.log("node index.js -wp url download-directory");
-    }
-  })().catch(err => {
-    console.error(err);
-  });
-} else if (process.argv[2] === "-getty") {
-  (async () => {
-    if (process.argv[3] && process.argv[4]) {
-      const browser = await puppeteer.launch();
-      const page = await browser.newPage();
-      await page.setJavaScriptEnabled(false);
-      await page.goto(process.argv[3]);
-
+    } else if (process.argv[2] === "-getty") {
       const hrefs = await page.$$eval(
         'a[href^="/detail/news-photo"]',
         elements => elements.map(a => a.href)
@@ -67,14 +54,12 @@ if (process.argv[2] === "-wp") {
           res.pipe(ws);
         });
       }
-
-      await browser.close();
-    } else {
-      console.log("node index.js -getty url download-directory");
     }
-  })().catch(err => {
-    console.error(err);
-  });
-} else {
-  console.log("node index.js -getty|-wp url download-directory");
-}
+
+    await browser.close();
+  } else {
+    console.log("node index.js -wp|-getty url download-directory");
+  }
+})().catch(err => {
+  console.error(err);
+});
