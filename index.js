@@ -30,9 +30,7 @@ const request = require("request");
         const img = await page.$eval("img#fullsize_image", element => {
           if (element) return { src: element.src, alt: element.alt };
         });
-        request(img.src).pipe(
-          fs.createWriteStream(process.argv[4] + "\\" + img.alt)
-        );
+        wpDownload(img);
       }
     } else if (process.argv[2] === "-getty") {
       const hrefs = await page.$$eval(
@@ -46,13 +44,7 @@ const request = require("request");
           "img.asset-card__image",
           element => element.src
         );
-        request.get(src).on("response", res => {
-          const filename = res.headers["content-disposition"].match(
-            /(filename=|filename\*='')(.*)$/
-          )[2];
-          const ws = fs.createWriteStream(process.argv[4] + "\\" + filename);
-          res.pipe(ws);
-        });
+        gettyDownload(src);
       }
     }
 
@@ -63,3 +55,28 @@ const request = require("request");
 })().catch(err => {
   console.error(err);
 });
+
+function wpDownload(img) {
+  request(img.src)
+    .on("error", function(err) {
+      console.log(img.src, err);
+      wpDownload(img);
+    })
+    .pipe(fs.createWriteStream(process.argv[4] + "\\" + img.alt));
+}
+
+function gettyDownload(src) {
+  request
+    .get(src)
+    .on("response", res => {
+      const filename = res.headers["content-disposition"].match(
+        /(filename=|filename\*='')(.*)$/
+      )[2];
+      const ws = fs.createWriteStream(process.argv[4] + "\\" + filename);
+      res.pipe(ws);
+    })
+    .on("error", function(err) {
+      console.log(src, err);
+      gettyDownload(src);
+    });
+}
